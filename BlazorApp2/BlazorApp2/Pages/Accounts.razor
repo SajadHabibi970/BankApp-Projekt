@@ -1,0 +1,45 @@
+@page "/accounts"
+@using BlazorApp2.Interfaces
+@using BlazorApp2.Domain
+@inject IAccountService AccountService
+<h3>Mina konton</h3>
+
+@if (_accounts == null || !_accounts.Any())
+{
+    <p>Inga konton ännu.</p>
+}
+else
+{
+    <table class="table">
+        <thead>
+        <tr>
+            <th>Namn</th>
+            <th>Typ</th>
+            <th>Saldo</th>
+            <th>Valuta</th>
+        </tr>
+        </thead>
+        <tbody>
+        @foreach (var acc in _accounts)
+        {
+            <tr>
+                <td>@acc.Name</td>
+                <td>@(acc.AccountType == AccountType.Deposit ? "Lönekonto" : "Sparkonto")</td>
+                <td>@acc.Balance</td>
+                <td>@acc.Currency</td>
+            </tr>
+        }
+        </tbody>
+    </table>
+}
+
+
+@code {
+    private List<IBankAccount> _accounts = new();
+
+    protected override void OnInitialized()
+    {
+        _accounts = AccountService.GetAccounts();
+    }
+    
+}

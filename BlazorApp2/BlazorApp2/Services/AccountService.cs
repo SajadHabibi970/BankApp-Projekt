@@ -28,7 +28,6 @@ public class AccountService : IAccountService
 
     public List<IBankAccount> GetAccounts()
     {
-        // vi returnerar en kopia så man inte kan ändra listan utifrån
         return _accounts.Cast<IBankAccount>().ToList();
     }
 }
