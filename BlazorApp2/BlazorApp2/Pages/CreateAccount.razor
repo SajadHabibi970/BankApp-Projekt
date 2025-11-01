@@ -1,0 +1,78 @@
+@page "/createAccount"
+@using BlazorApp2.Domain
+@using BlazorApp2.Interfaces
+@inject IAccountService AccountService
+<h3>Skapa konto</h3>
+
+<EditForm Model="_model" OnValidSubmit="CreateBankAccount">
+    <DataAnnotationsValidator />
+    <ValidationSummary />
+
+    <div class="mb-2">
+        <label>Kontonamn</label>
+        <InputText class="form-control" @bind-Value="_model.Name" />
+    </div>
+
+    <div class="mb-2">
+        <label>Kontotyp</label>
+        <InputSelect class="form-select" @bind-Value="_model.AccountType">
+            <option value="@AccountType.Deposit">Lönekonto</option>
+            <option value="@AccountType.Saving">Sparkonto</option>
+        </InputSelect>
+    </div>
+
+    <div class="mb-2">
+        <label>Valuta</label>
+        <InputText class="form-control" @bind-Value="_model.Currency" />
+    </div>
+
+    <div class="mb-2">
+        <label>Startsaldo</label>
+        <InputNumber class="form-control" @bind-Value="_model.InitialBalance" />
+    </div>
+
+    <button type="submit" class="btn btn-primary">Skapa</button>
+</EditForm>
+
+@if (_accounts.Any())
+{
+    <h4 class="mt-3">Mina konton</h4>
+    <ul>
+        @foreach (var acc in _accounts)
+        {
+            <li>@acc.Name – @acc.Balance @acc.Currency (@acc.AccountType)</li>
+        }
+    </ul>
+}
+
+
+@code {
+    private CreateAccountModel _model = new();
+    private List<IBankAccount> _accounts = new();
+
+    protected override void OnInitialized()
+    {
+        _accounts = AccountService.GetAccounts();
+    }
+
+    private void CreateBankAccount()
+    {
+        AccountService.CreateBankAccount(
+            _model.Name,
+            _model.AccountType,
+            _model.Currency,
+            _model.InitialBalance
+        );
+
+        _accounts = AccountService.GetAccounts();
+        _model = new CreateAccountModel();
+    }
+
+    private class CreateAccountModel
+    {
+        public string Name { get; set; } = string.Empty;
+        public AccountType AccountType { get; set; } = AccountType.Deposit;
+        public string Currency { get; set; } = "SEK";
+        public decimal InitialBalance { get; set; } = 0;
+    }
+}
