@@ -30,4 +30,9 @@ public class AccountService : IAccountService
     {
         return _accounts.Cast<IBankAccount>().ToList();
     }
+    
+    public IBankAccount? GetAccount(Guid accountId)
+    {
+        return _accounts.FirstOrDefault(a => a.Id == accountId);
+    }
 }

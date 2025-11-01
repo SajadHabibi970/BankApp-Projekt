@@ -1,0 +1,159 @@
+@page "/transaction"
+@using BlazorApp2.Interfaces
+@inject IAccountService AccountService
+@inject ITransactionService TransactionService
+@using BlazorApp2.Domain
+@using BlazorApp2.Interfaces
+@using TransactionModel = BlazorApp2.Domain.Transaction
+<h3>Ny transaktion</h3>
+
+@if (_accounts == null || !_accounts.Any())
+{
+    <div class="alert alert-warning mt-3">
+        Du måste skapa minst ett konto innan du kan göra en transaktion.
+    </div>
+}
+else
+{
+    <EditForm Model="_model" OnValidSubmit="HandleTransaction">
+        <DataAnnotationsValidator />
+        <ValidationSummary />
+        
+        <div class="mb-3">
+            <label class="form-label fw-bold">Från konto</label>
+            <InputSelect class="form-select" @bind-Value="_model.FromAccountId">
+                <option value="">Välj konto</option>
+                @foreach (var account in _accounts)
+                {
+                    <option value="@account.Id">
+                        @account.Name (@account.Balance @account.Currency)
+                    </option>
+                }
+            </InputSelect>
+        </div>
+        
+        <div class="mb-3">
+            <label class="form-label fw-bold">Typ av transaktion</label>
+            <InputSelect class="form-select" @bind-Value="_model.Type">
+                <option value="@TransactionType.Deposit">Insättning</option>
+                <option value="@TransactionType.Withdraw">Uttag</option>
+                <option value="@TransactionType.Transfer">Överföring</option>
+            </InputSelect>
+        </div>
+        
+        @if (_model.Type == TransactionType.Transfer)
+        {
+            <div class="mb-3">
+                <label class="form-label fw-bold">Till konto</label>
+                <InputSelect class="form-select" @bind-Value="_model.ToAccountId">
+                    <option value="">-- Välj mål-konto --</option>
+                    @foreach (var account in _accounts.Where(a => a.Id.ToString() != _model.FromAccountId))
+                    {
+                        <option value="@account.Id">@account.Name</option>
+                    }
+                </InputSelect>
+            </div>
+        }
+        
+        <div class="mb-3">
+            <label class="form-label fw-bold">Belopp</label>
+            <InputNumber class="form-control" @bind-Value="_model.Amount" />
+        </div>
+
+        <button type="submit" class="btn btn-primary">Utför transaktion</button>
+    </EditForm>
+
+    @if (!string.IsNullOrEmpty(_message))
+    {
+        <div class="alert alert-info mt-3">@_message</div>
+    }
+}
+
+
+@code {
+    private class TransactionFormModel
+    {
+        public string FromAccountId { get; set; } = string.Empty;
+        public string ToAccountId { get; set; } = string.Empty;
+        public TransactionType Type { get; set; } = TransactionType.Deposit;
+        public decimal Amount { get; set; }
+    }
+
+    private TransactionFormModel _model = new();
+    private List<IBankAccount> _accounts = new();
+    private string _message = "";
+
+    protected override void OnInitialized()
+    {
+        _accounts = AccountService.GetAccounts();
+    }
+
+    private void HandleTransaction()
+    {
+        try
+        {
+            if (!Guid.TryParse(_model.FromAccountId, out var fromId))
+            {
+                _message = "Välj ett giltigt konto att ta ifrån.";
+                return;
+            }
+
+            if (_model.Amount <= 0)
+            {
+                _message = "Beloppet måste vara större än 0.";
+                return;
+            }
+
+            var fromAccount = AccountService.GetAccount(fromId) as BankAccount;
+            if (fromAccount == null)
+            {
+                _message = "Kontot hittades inte.";
+                return;
+            }
+
+            switch (_model.Type)
+            {
+                case TransactionType.Deposit:
+                    fromAccount.Deposit(_model.Amount);
+                    TransactionService.AddTransaction(new TransactionModel(fromAccount.Id, TransactionType.Deposit, _model.Amount, fromAccount.Balance));
+                    _message = $"Insättning på {_model.Amount} kr lyckades.";
+                    break;
+
+                case TransactionType.Withdraw:
+                    fromAccount.Withdraw(_model.Amount);
+                    TransactionService.AddTransaction(new TransactionModel(fromAccount.Id, TransactionType.Withdraw, _model.Amount, fromAccount.Balance));
+                    _message = $"Uttag på {_model.Amount} kr lyckades.";
+                    break;
+
+                case TransactionType.Transfer:
+                    if (!Guid.TryParse(_model.ToAccountId, out var toId))
+                    {
+                        _message = "Välj ett giltigt mål-konto.";
+                        return;
+                    }
+
+                    var toAccount = AccountService.GetAccount(toId) as BankAccount;
+                    if (toAccount == null)
+                    {
+                        _message = "Mål-kontot hittades inte.";
+                        return;
+                    }
+
+                    fromAccount.Withdraw(_model.Amount);
+                    toAccount.Deposit(_model.Amount);
+
+                    TransactionService.AddTransaction(new TransactionModel(fromAccount.Id, TransactionType.Transfer, _model.Amount, fromAccount.Balance));
+                    TransactionService.AddTransaction(new TransactionModel(toAccount.Id, TransactionType.Transfer, _model.Amount, toAccount.Balance));
+
+                    _message = $"Överföring på {_model.Amount} kr från '{fromAccount.Name}' till '{toAccount.Name}' lyckades.";
+                    break;
+            }
+
+            _model = new TransactionFormModel();
+        }
+        catch (Exception ex)
+        {
+            _message = $"Fel: {ex.Message}";
+        }
+    }
+}
