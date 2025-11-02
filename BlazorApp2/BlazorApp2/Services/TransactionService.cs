@@ -5,46 +5,69 @@ using BlazorApp2.Interfaces;
 public class TransactionService : ITransactionService
 {
     private const string StorageKey = "bank-transactions";
-    private readonly IStorageService _storage;
+    private readonly IStorageService _storageService;
     private readonly List<Transaction> _transactions = new();
-    private bool _loaded;
+    private bool _isLoaded;
 
-    public TransactionService(IStorageService storage)
+    public TransactionService(IStorageService storageService)
     {
-        _storage = storage;
+        _storageService = storageService;
     }
 
-    private async Task EnsureLoadedAsync()
+    private async Task EnsureInitializedAsync()
     {
-        if (_loaded) return;
+        if (_isLoaded && _transactions.Any())
+        {
+            return;
+        }
 
-        var fromStorage = await _storage.LoadAsync<List<Transaction>>(StorageKey);
-        if (fromStorage is { Count: > 0 })
-            _transactions.AddRange(fromStorage);
+        var fromStorage = await _storageService.LoadAsync<List<Transaction>>(StorageKey);
 
-        _loaded = true;
+        if (fromStorage != null && fromStorage.Count > 0)
+        {
+            _transactions.Clear();
+            
+            _transactions.AddRange(fromStorage.Where(t =>
+                t != null &&
+                t.Date > DateTime.MinValue &&
+                t.AccountId != Guid.Empty &&
+                t.Amount > 0));
+        }
+        
+        _isLoaded = true;
     }
 
-    private async Task SaveAsync() =>
-        await _storage.SaveAsync(StorageKey, _transactions);
+    private async Task SaveAsync()
+    {
+        await _storageService.SaveAsync(StorageKey, _transactions);
+        Console.WriteLine($"[TransactionService] Sparade {_transactions.Count} transaktioner till LocalStorage");
+    }
 
     public async Task AddTransactionAsync(Transaction transaction)
     {
-        await EnsureLoadedAsync();
-        _transactions.Add(transaction);
-        await SaveAsync();
-        Console.WriteLine($"[TransactionService] Ny transaktion: {transaction.Type} {transaction.Amount} kr");
+       await EnsureInitializedAsync();
+
+       if (transaction == null)
+       {
+           return;
+       }
+       
+       _transactions.Add(transaction);
+       await SaveAsync();
+       Console.WriteLine($"[TransaktionService] Ny transaktion: {transaction.Type} {transaction.Amount}kr {transaction.Description}");
     }
 
     public async Task<List<Transaction>> GetAllAsync()
     {
-        await EnsureLoadedAsync();
-        return _transactions.OrderByDescending(t => t.Date).ToList();
+        await EnsureInitializedAsync();
+        return _transactions
+            .OrderByDescending(t => t.Date)
+            .ToList();
     }
 
     public async Task<List<Transaction>> GetByAccountIdAsync(Guid accountId)
     {
-        await EnsureLoadedAsync();
+        await EnsureInitializedAsync();
         return _transactions
             .Where(t => t.AccountId == accountId)
             .OrderByDescending(t => t.Date)

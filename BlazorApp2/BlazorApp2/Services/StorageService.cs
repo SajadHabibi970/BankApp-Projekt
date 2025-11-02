@@ -21,15 +21,38 @@ public class StorageService : IStorageService
 
     public async Task SaveAsync<T>(string key, T value)
     {
-        var json = JsonSerializer.Serialize(value, _options);
-        await _jsRuntime.InvokeVoidAsync("localStorage.setItem", key, json);
+        try
+        {
+            var json = JsonSerializer.Serialize(value, _options);
+            await _jsRuntime.InvokeVoidAsync("localStorage.setItem", key, json);
+            Console.WriteLine($"[StorageService] Sparade data till {key}");
+        }
+        catch (Exception e)
+        {
+            Console.WriteLine($"[StorageService] Fel vid sparning av {key}: {e.Message}");
+        }
     }
 
     public async Task<T?> LoadAsync<T>(string key)
     {
-        var json = await _jsRuntime.InvokeAsync<string>("localStorage.getItem", key);
-        return string.IsNullOrWhiteSpace(json)
-            ? default
-            : JsonSerializer.Deserialize<T>(json, _options);
+        try
+        {
+            var json = await _jsRuntime.InvokeAsync<string>("localStorage.getItem", key);
+
+            if (string.IsNullOrWhiteSpace(json))
+            {
+                Console.WriteLine($"[StorageService] Ingen data hittades för {key}");
+                return default;
+            }
+            
+            var result = JsonSerializer.Deserialize<T>(json, _options);
+            Console.WriteLine($"[StorageService] Laddade data för {key}");
+            return result;
+        }
+        catch (Exception e)
+        {
+            Console.WriteLine($"[StorageService] Fel vid laddning av {key}: {e.Message}");
+            return default;
+        }
     }
 }

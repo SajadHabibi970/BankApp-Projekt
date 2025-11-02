@@ -9,4 +9,5 @@ public interface ITransaction
     TransactionType Type { get; }
     decimal Amount { get; }
     decimal BalanceAfter { get; } 
+    string Description { get; }
 }

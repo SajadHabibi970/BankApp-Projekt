@@ -1,10 +1,8 @@
 @page "/transaction"
 @using BlazorApp2.Interfaces
 @inject IAccountService AccountService
-@inject ITransactionService TransactionService
 @using BlazorApp2.Domain
-@using BlazorApp2.Interfaces
-@using TransactionModel = BlazorApp2.Domain.Transaction
+
 <h3>Ny transaktion</h3>
 
 @if (_accounts == null || !_accounts.Any())
@@ -49,7 +47,7 @@ else
                     <option value="">-- Välj mål-konto --</option>
                     @foreach (var account in _accounts.Where(a => a.Id.ToString() != _model.FromAccountId))
                     {
-                        <option value="@account.Id">@account.Name</option>
+                        <option value="@account.Id">@account.Name @account.Currency</option>
                     }
                 </InputSelect>
             </div>
@@ -68,7 +66,6 @@ else
         <div class="alert alert-info mt-3">@_message</div>
     }
 }
-
 
 @code {
     private class TransactionFormModel
@@ -103,61 +100,39 @@ else
                 _message = "Beloppet måste vara större än 0.";
                 return;
             }
-            
-            var fromAccount = await AccountService.GetAccount(fromId) as BankAccount;
-            if (fromAccount == null)
-            {
-                _message = "Kontot hittades inte.";
-                return;
-            }
 
             switch (_model.Type)
             {
                 case TransactionType.Deposit:
-                    fromAccount.Deposit(_model.Amount);
-                    await TransactionService.AddTransactionAsync(
-                        new TransactionModel(fromAccount.Id, TransactionType.Deposit, _model.Amount, fromAccount.Balance)
-                    );
-                    _message = $"Insättning på {_model.Amount} kr lyckades.";
+                    await AccountService.DepositAsync(fromId, _model.Amount);
+                    _message = $"Insättning på {_model.Amount} kr till kontot lyckades";
                     break;
 
                 case TransactionType.Withdraw:
-                    fromAccount.Withdraw(_model.Amount);
-                    await TransactionService.AddTransactionAsync(
-                        new TransactionModel(fromAccount.Id, TransactionType.Withdraw, _model.Amount, fromAccount.Balance)
-                    );
-                    _message = $"Uttag på {_model.Amount} kr lyckades.";
+                    await AccountService.WithdrawAsync(fromId, _model.Amount);
+                    _message = $"Uttag på {_model.Amount} kr från kontot lyckades";
                     break;
 
                 case TransactionType.Transfer:
                     if (!Guid.TryParse(_model.ToAccountId, out var toId))
                     {
-                        _message = "Välj ett giltigt mål-konto.";
+                        _message = "Välj ett giltigt konto för överföringen.";
                         return;
                     }
 
-                    var toAccount = await AccountService.GetAccount(toId) as BankAccount;
-                    if (toAccount == null)
-                    {
-                        _message = "Mål-kontot hittades inte.";
-                        return;
-                    }
+                    await AccountService.TransferAsync(fromId, toId, _model.Amount);
 
-                    fromAccount.Withdraw(_model.Amount);
-                    toAccount.Deposit(_model.Amount);
-
-                    await TransactionService.AddTransactionAsync(
-                        new TransactionModel(fromAccount.Id, TransactionType.Transfer, _model.Amount, fromAccount.Balance)
-                    );
-                    await TransactionService.AddTransactionAsync(
-                        new TransactionModel(toAccount.Id, TransactionType.Transfer, _model.Amount, toAccount.Balance)
-                    );
-
-                    _message = $"Överföring på {_model.Amount} kr från '{fromAccount.Name}' till '{toAccount.Name}' lyckades.";
+                    var fromName = _accounts.First(a => a.Id == fromId).Name;
+                    var toName = _accounts.First(a => a.Id == toId).Name;
+                    _message = $"Överföring på {_model.Amount} kr från {fromName} till {toName} lyckades";
                     break;
             }
 
             _model = new TransactionFormModel();
+
+            _accounts = await AccountService.GetAccounts();
+            
+            StateHasChanged();
         }
         catch (Exception ex)
         {
