@@ -48,12 +48,12 @@ public class BankAccount : IBankAccount
     }
 
     [JsonConstructor]
-    public BankAccount(Guid id, string name, AccountType accountType, decimal initialBalance, string currency)
+    public BankAccount(Guid id, string name, AccountType accountType, decimal balance, string currency)
     {
         Id = id;
         Name = name;
         AccountType = accountType;
-        Balance = initialBalance;
+        Balance = balance;
         Currency = currency;
         LastUpdated = LastUpdated;
     }

@@ -1,0 +1,163 @@
+@page "/history"
+@using BlazorApp2.Interfaces
+@using BlazorApp2.Domain
+@inject IAccountService AccountService
+@inject ITransactionService TransactionService
+<h3>Historik</h3>
+
+@if (_accounts == null || !_accounts.Any())
+{
+    <p>Du har inga konton ännu. Skapa ett konto först.</p>
+}
+else
+{
+    <div class="d-flex flex-wrap gap-3 mb-3">
+        <div>
+            <label class="form-label fw-bold">Filtrera per konto:</label>
+            <select class="form-select" @onchange="OnAccountChanged">
+                <option value="">Alla konton</option>
+                @foreach (var acc in _accounts)
+                {
+                    <option value="@acc.Id" selected="@(_selectedAccountId == acc.Id.ToString())">
+                        @acc.Name (@acc.Currency)
+                    </option>
+                }
+            </select>
+        </div>
+        
+        <div>
+            <label class="form-label fw-bold">Sortera efter:</label>
+            <select class="form-select" @onchange="OnSortChanged">
+                <option value="DateDesc" selected="@(_sortBy == "DateDesc")">Datum (nyast först)</option>
+                <option value="DateAsc" selected="@(_sortBy == "DateAsc")">Datum (äldst först)</option>
+                <option value="AmountDesc" selected="@(_sortBy == "AmountDesc")">Belopp (högst först)</option>
+                <option value="AmountAsc" selected="@(_sortBy == "AmountAsc")">Belopp (lägst först)</option>
+            </select>
+        </div>
+    </div>
+
+    @if (_transactions == null || !_transactions.Any())
+    {
+        <p>Inga transaktioner hittades för det valda filtret.</p>
+    }
+    else
+    {
+        <table class="table table-striped align-middle">
+            <thead class="table-dark">
+                <tr>
+                    <th>Datum</th>
+                    <th>Konto</th>
+                    <th>Typ</th>
+                    <th>Belopp</th>
+                    <th>Saldo efter</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var t in _transactions)
+                {
+                    var konto = _accounts.FirstOrDefault(a => a.Id == t.AccountId);
+                    
+                    string typText;
+                    string typeClass;
+
+                    switch (t.Type)
+                    {
+                        case TransactionType.Deposit:
+                            typText = "Insättning";
+                            typeClass = "text-success fw-bold";
+                            break;
+
+                        case TransactionType.Withdraw:
+                            typText = "Uttag";
+                            typeClass = "text-danger fw-bold";
+                            break;
+
+                        case TransactionType.Transfer:
+                            if (t.Description.StartsWith("Från"))
+                            {
+                                typText = "Överföring in";
+                                typeClass = "text-success fw-bold";
+                            }
+                            else
+                            {
+                                typText = "Överföring ut";
+                                typeClass = "text-danger fw-bold";
+                            }
+                            break;
+
+                        default:
+                            typText = t.Type.ToString();
+                            typeClass = "";
+                            break;
+                    }
+
+                    <tr>
+                        <td>@t.Date.ToLocalTime().ToString("yyyy-MM-dd HH:mm")</td>
+                        <td>@konto?.Name</td>
+                        <td class="@typeClass">@typText</td>
+                        <td class="@typeClass">@t.Amount</td>
+                        <td>@t.BalanceAfter</td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    }
+}
+
+@code {
+    private List<IBankAccount> _accounts = new();
+    private List<BlazorApp2.Domain.Transaction> _transactions = new();
+    private string _selectedAccountId = "";
+    private string _sortBy = "DateDesc";
+
+    protected override async Task OnInitializedAsync()
+    {
+        _accounts = await AccountService.GetAccounts();
+        await LoadTransactionsAsync();
+    }
+
+    private async Task LoadTransactionsAsync()
+    {
+        if (string.IsNullOrWhiteSpace(_selectedAccountId))
+        {
+            _transactions = await TransactionService.GetAllAsync();
+        }
+        else if (Guid.TryParse(_selectedAccountId, out var accountId))
+        {
+            _transactions = await TransactionService.GetByAccountIdAsync(accountId);
+        }
+        else
+        {
+            _transactions = new();
+        }
+
+        SortTransactions();
+    }
+    
+    private async Task OnAccountChanged(ChangeEventArgs e)
+    {
+        _selectedAccountId = e.Value?.ToString() ?? "";
+        await LoadTransactionsAsync();
+    }
+
+    private void OnSortChanged(ChangeEventArgs e)
+    {
+        _sortBy = e.Value?.ToString() ?? "DateDesc";
+        SortTransactions();
+    }
+
+    private void SortTransactions()
+    {
+        _transactions = _sortBy switch
+        {
+            "DateAsc" => _transactions.OrderBy(t => t.Date).ToList(),
+            "DateDesc" => _transactions.OrderByDescending(t => t.Date).ToList(),
+            "AmountAsc" => _transactions.OrderBy(t => t.Amount).ToList(),
+            "AmountDesc" => _transactions.OrderByDescending(t => t.Amount).ToList(),
+            _ => _transactions
+        };
+
+        StateHasChanged();
+    }
+
+}

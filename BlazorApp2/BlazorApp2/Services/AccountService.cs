@@ -25,7 +25,7 @@ public class AccountService : IAccountService
         if (fromStorage is { Count: > 0 })
         {
             _accounts.AddRange(fromStorage);
-            Console.WriteLine($"$[AccountService] laddade {_accounts.Count} konton från LocalStorage");
+            Console.WriteLine($"[AccountService] laddade {_accounts.Count} konton från LocalStorage");
         }
 
         _isLoaded = true;
@@ -123,10 +123,10 @@ public class AccountService : IAccountService
         await SaveAsync();
         
         await _transactionService.AddTransactionAsync(
-            new Transaction(from.Id,TransactionType.Transfer, amount,from.Balance,$"Till {to.Name}"));
+            new Transaction(from.Id, TransactionType.Transfer, amount, from.Balance, $"Till {to.Name}"));
         
         await _transactionService.AddTransactionAsync(
-            new Transaction(to.Id,TransactionType.Deposit, amount,to.Balance,$"Från {from.Name}"));
+            new Transaction(to.Id, TransactionType.Transfer, amount, to.Balance, $"Från {from.Name}"));
         
         Console.WriteLine($"[AccountService] Överförde {amount} {from.Currency} från {from.Name} till {to.Name}");
     }

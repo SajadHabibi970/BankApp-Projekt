@@ -44,7 +44,7 @@ else
             <div class="mb-3">
                 <label class="form-label fw-bold">Till konto</label>
                 <InputSelect class="form-select" @bind-Value="_model.ToAccountId">
-                    <option value="">-- Välj mål-konto --</option>
+                    <option value="">Välj konto</option>
                     @foreach (var account in _accounts.Where(a => a.Id.ToString() != _model.FromAccountId))
                     {
                         <option value="@account.Id">@account.Name @account.Currency</option>

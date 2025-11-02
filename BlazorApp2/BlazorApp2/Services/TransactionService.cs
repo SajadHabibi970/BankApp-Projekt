@@ -16,22 +16,23 @@ public class TransactionService : ITransactionService
 
     private async Task EnsureInitializedAsync()
     {
-        if (_isLoaded && _transactions.Any())
+        if (_isLoaded)
         {
             return;
         }
 
         var fromStorage = await _storageService.LoadAsync<List<Transaction>>(StorageKey);
+        _transactions.Clear();
 
         if (fromStorage != null && fromStorage.Count > 0)
         {
-            _transactions.Clear();
-            
-            _transactions.AddRange(fromStorage.Where(t =>
-                t != null &&
-                t.Date > DateTime.MinValue &&
-                t.AccountId != Guid.Empty &&
-                t.Amount > 0));
+          _transactions.AddRange(fromStorage);
+          Console.WriteLine($"[TransactionService] Laddade {_transactions.Count} transaktioner från LocalStorage");
+        }
+
+        else
+        {
+            Console.WriteLine($"[TransactionService] Inga transaktioner hittades i LocalStorage");
         }
         
         _isLoaded = true;
