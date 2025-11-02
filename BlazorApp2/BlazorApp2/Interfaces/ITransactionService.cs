@@ -3,7 +3,7 @@ using BlazorApp2.Domain;
 
 public interface ITransactionService
 {
-    void AddTransaction(Transaction transaction);
-    List<Transaction> GetAll();
-    List<Transaction> GetByAccountId(Guid accountId);
+    Task AddTransactionAsync(Transaction transaction);
+    Task<List<Transaction>> GetAllAsync();
+    Task<List<Transaction>> GetByAccountIdAsync(Guid accountId);
 }

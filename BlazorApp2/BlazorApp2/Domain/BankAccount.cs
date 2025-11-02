@@ -20,6 +20,8 @@ public class BankAccount : IBankAccount
         Currency = currency;
         LastUpdated = DateTime.Now;
     }
+    
+    public BankAccount() { }
 
     public void Deposit(decimal amount)
     {

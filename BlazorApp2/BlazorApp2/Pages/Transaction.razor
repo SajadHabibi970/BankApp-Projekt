@@ -15,7 +15,7 @@
 }
 else
 {
-    <EditForm Model="_model" OnValidSubmit="HandleTransaction">
+    <EditForm Model="_model" OnValidSubmit="HandleTransactionAsync">
         <DataAnnotationsValidator />
         <ValidationSummary />
         
@@ -83,12 +83,12 @@ else
     private List<IBankAccount> _accounts = new();
     private string _message = "";
 
-    protected override void OnInitialized()
+    protected override async Task OnInitializedAsync()
     {
-        _accounts = AccountService.GetAccounts();
+        _accounts = await AccountService.GetAccounts();
     }
 
-    private void HandleTransaction()
+    private async Task HandleTransactionAsync()
     {
         try
         {
@@ -103,8 +103,8 @@ else
                 _message = "Beloppet måste vara större än 0.";
                 return;
             }
-
-            var fromAccount = AccountService.GetAccount(fromId) as BankAccount;
+            
+            var fromAccount = await AccountService.GetAccount(fromId) as BankAccount;
             if (fromAccount == null)
             {
                 _message = "Kontot hittades inte.";
@@ -115,13 +115,17 @@ else
             {
                 case TransactionType.Deposit:
                     fromAccount.Deposit(_model.Amount);
-                    TransactionService.AddTransaction(new TransactionModel(fromAccount.Id, TransactionType.Deposit, _model.Amount, fromAccount.Balance));
+                    await TransactionService.AddTransactionAsync(
+                        new TransactionModel(fromAccount.Id, TransactionType.Deposit, _model.Amount, fromAccount.Balance)
+                    );
                     _message = $"Insättning på {_model.Amount} kr lyckades.";
                     break;
 
                 case TransactionType.Withdraw:
                     fromAccount.Withdraw(_model.Amount);
-                    TransactionService.AddTransaction(new TransactionModel(fromAccount.Id, TransactionType.Withdraw, _model.Amount, fromAccount.Balance));
+                    await TransactionService.AddTransactionAsync(
+                        new TransactionModel(fromAccount.Id, TransactionType.Withdraw, _model.Amount, fromAccount.Balance)
+                    );
                     _message = $"Uttag på {_model.Amount} kr lyckades.";
                     break;
 
@@ -132,7 +136,7 @@ else
                         return;
                     }
 
-                    var toAccount = AccountService.GetAccount(toId) as BankAccount;
+                    var toAccount = await AccountService.GetAccount(toId) as BankAccount;
                     if (toAccount == null)
                     {
                         _message = "Mål-kontot hittades inte.";
@@ -142,8 +146,12 @@ else
                     fromAccount.Withdraw(_model.Amount);
                     toAccount.Deposit(_model.Amount);
 
-                    TransactionService.AddTransaction(new TransactionModel(fromAccount.Id, TransactionType.Transfer, _model.Amount, fromAccount.Balance));
-                    TransactionService.AddTransaction(new TransactionModel(toAccount.Id, TransactionType.Transfer, _model.Amount, toAccount.Balance));
+                    await TransactionService.AddTransactionAsync(
+                        new TransactionModel(fromAccount.Id, TransactionType.Transfer, _model.Amount, fromAccount.Balance)
+                    );
+                    await TransactionService.AddTransactionAsync(
+                        new TransactionModel(toAccount.Id, TransactionType.Transfer, _model.Amount, toAccount.Balance)
+                    );
 
                     _message = $"Överföring på {_model.Amount} kr från '{fromAccount.Name}' till '{toAccount.Name}' lyckades.";
                     break;

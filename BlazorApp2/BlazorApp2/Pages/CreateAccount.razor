@@ -4,7 +4,7 @@
 @inject IAccountService AccountService
 <h3>Skapa konto</h3>
 
-<EditForm Model="_model" OnValidSubmit="CreateBankAccount">
+<EditForm Model="_model" OnValidSubmit="CreateBankAccountAsync">
     <DataAnnotationsValidator />
     <ValidationSummary />
 
@@ -45,26 +45,25 @@
     </ul>
 }
 
-
 @code {
     private CreateAccountModel _model = new();
     private List<IBankAccount> _accounts = new();
 
-    protected override void OnInitialized()
+    protected override async Task OnInitializedAsync()
     {
-        _accounts = AccountService.GetAccounts();
+        _accounts = await AccountService.GetAccounts();
     }
 
-    private void CreateBankAccount()
+    private async Task CreateBankAccountAsync()
     {
-        AccountService.CreateBankAccount(
+        await AccountService.CreateBankAccount(
             _model.Name,
             _model.AccountType,
             _model.Currency,
             _model.InitialBalance
         );
 
-        _accounts = AccountService.GetAccounts();
+        _accounts = await AccountService.GetAccounts();
         _model = new CreateAccountModel();
     }
 

@@ -4,26 +4,47 @@ using BlazorApp2.Interfaces;
 
 public class TransactionService : ITransactionService
 {
+    private const string StorageKey = "bank-transactions";
+    private readonly IStorageService _storage;
     private readonly List<Transaction> _transactions = new();
-    
-    public void AddTransaction(Transaction transaction)
-    {
-        if (transaction == null)
-            throw new ArgumentNullException(nameof(transaction));
+    private bool _loaded;
 
+    public TransactionService(IStorageService storage)
+    {
+        _storage = storage;
+    }
+
+    private async Task EnsureLoadedAsync()
+    {
+        if (_loaded) return;
+
+        var fromStorage = await _storage.LoadAsync<List<Transaction>>(StorageKey);
+        if (fromStorage is { Count: > 0 })
+            _transactions.AddRange(fromStorage);
+
+        _loaded = true;
+    }
+
+    private async Task SaveAsync() =>
+        await _storage.SaveAsync(StorageKey, _transactions);
+
+    public async Task AddTransactionAsync(Transaction transaction)
+    {
+        await EnsureLoadedAsync();
         _transactions.Add(transaction);
+        await SaveAsync();
         Console.WriteLine($"[TransactionService] Ny transaktion: {transaction.Type} {transaction.Amount} kr");
     }
-    
-    public List<Transaction> GetAll()
+
+    public async Task<List<Transaction>> GetAllAsync()
     {
-        return _transactions
-            .OrderByDescending(t => t.Date)
-            .ToList();
+        await EnsureLoadedAsync();
+        return _transactions.OrderByDescending(t => t.Date).ToList();
     }
-    
-    public List<Transaction> GetByAccountId(Guid accountId)
+
+    public async Task<List<Transaction>> GetByAccountIdAsync(Guid accountId)
     {
+        await EnsureLoadedAsync();
         return _transactions
             .Where(t => t.AccountId == accountId)
             .OrderByDescending(t => t.Date)

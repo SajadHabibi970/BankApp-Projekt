@@ -5,34 +5,51 @@ namespace BlazorApp2.Services;
 
 public class AccountService : IAccountService
 {
+    private const string StorageKey = "bank-accounts";
+    private readonly IStorageService _storage;
     private readonly List<BankAccount> _accounts = new();
+    private bool _isLoaded = false;
 
-    public IBankAccount CreateBankAccount(string name, AccountType accountType, string currency, decimal initialBalance)
+    public AccountService(IStorageService storage)
     {
-        if (string.IsNullOrWhiteSpace(name))
-            throw new ArgumentException("Kontonamn får inte vara tomt");
+        _storage = storage;
+    }
 
-        if (initialBalance < 0)
-            throw new ArgumentException("Startsaldo kan inte vara negativt");
+    private async Task EnsureLoadedAsync()
+    {
+        if (_isLoaded) return;
 
-        if (string.IsNullOrWhiteSpace(currency))
-            currency = "SEK";
+        var fromStorage = await _storage.LoadAsync<List<BankAccount>>(StorageKey);
+        if (fromStorage is { Count: > 0 })
+        {
+            _accounts.AddRange(fromStorage);
+        }
 
-        var account = new BankAccount( name, accountType, initialBalance, currency);
+        _isLoaded = true;
+    }
+
+    private async Task SaveAsync() =>
+        await _storage.SaveAsync(StorageKey, _accounts);
+
+    public async Task<IBankAccount> CreateBankAccount(string name, AccountType accountType, string currency, decimal initialBalance)
+    {
+        await EnsureLoadedAsync();
+
+        var account = new BankAccount(name, accountType, initialBalance, currency);
         _accounts.Add(account);
-
-        Console.WriteLine($"[AccountService] Skapade konto {name} ({accountType}) med {initialBalance} {currency}");
-
+        await SaveAsync();
         return account;
     }
 
-    public List<IBankAccount> GetAccounts()
+    public async Task<List<IBankAccount>> GetAccounts()
     {
+        await EnsureLoadedAsync();
         return _accounts.Cast<IBankAccount>().ToList();
     }
-    
-    public IBankAccount? GetAccount(Guid accountId)
+
+    public async Task<IBankAccount?> GetAccount(Guid accountId)
     {
+        await EnsureLoadedAsync();
         return _accounts.FirstOrDefault(a => a.Id == accountId);
     }
 }
