@@ -181,4 +181,32 @@ public class AccountService : IAccountService
         
         Console.WriteLine($"[AccountService] Överförde {amount} {from.Currency} från {from.Name} till {to.Name}");
     }
+
+    /// <summary>
+    /// Lägger till ränta på alla sparkonton
+    /// Skapar en transaktion för varje ränta som läggs till.
+    /// </summary>
+    /// <param name="intrestRate"></param>
+    public async Task ApplyInterestAsync(decimal intrestRate)
+    {
+        await EnsureInitializedAsync();
+
+        foreach (var account in _accounts.Where(a => a.AccountType == AccountType.Saving))
+        {
+            var IntrestAmount = account.Balance * (intrestRate / 100);
+            
+            if (IntrestAmount <= 0)
+            {
+                continue;
+            }
+            
+            account.Deposit(IntrestAmount);
+            
+            await _transactionService.AddTransactionAsync(
+                new Transaction(account.Id, TransactionType.Deposit, IntrestAmount, account.Balance, 
+                    $"Ränta {intrestRate}%"));
+            Console.WriteLine($"[AccountService] Ränta {intrestRate}% tillämpad på {account.Name}");
+        }
+        await SaveAsync();
+    }
 }

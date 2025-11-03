@@ -44,9 +44,12 @@ else
     </table>
 }
 
-<!-- Knapp för att ladda om kontolistan -->
 <div class="mt-3 text-center">
+    <!-- Knapp för att ladda om kontolistan-->
     <button class="btn btn-outline-primary" @onclick="ReloadAccount">Ladda om</button>
+    
+    <!--Knapp för att lägga till ränta-->
+    <button class="btn btn-outline-success ms-2" @onclick="() => ApplyInterest(1)"> Lägg till 1 % ränta</button>
 </div>
 
 @code {
@@ -78,6 +81,17 @@ else
     /// </summary>
     private async Task ReloadAccount()
     {
+        await LoadAccountsAsync();
+    }
+
+    /// <summary>
+    /// Lägger till 1% ränta på alla sparkonton
+    /// Efter att räntan lagts till laddas kontolistan om.
+    /// </summary>
+    /// <param name="percent"></param>
+    private async Task ApplyInterest(decimal percent)
+    {
+        await AccountService.ApplyInterestAsync(percent);
         await LoadAccountsAsync();
     }
 

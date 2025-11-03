@@ -67,8 +67,17 @@ else
                     switch (t.Type)
                     {
                         case TransactionType.Deposit:
-                            typText = "Insättning";
-                            typeClass = "text-success fw-bold";
+                            if (!string.IsNullOrEmpty(t.Description) && t.Description.Contains
+                                    ("Ränta", StringComparison.OrdinalIgnoreCase))
+                            {
+                                typText = "Ränta";
+                                typeClass = "text-info fw-bold";
+                            }
+                            else
+                            {
+                                typText = "Insättning";
+                                typeClass = "text-success fw-bold";
+                            }
                             break;
 
                         case TransactionType.Withdraw:
@@ -100,8 +109,8 @@ else
                         <td>@t.Date.ToLocalTime().ToString("yyyy-MM-dd HH:mm")</td>
                         <td>@konto?.Name</td>
                         <td class="@typeClass">@typText</td>
-                        <td class="@typeClass">@t.Amount</td>
-                        <td>@t.BalanceAfter</td>
+                        <td class="@typeClass">@t.Amount.ToString("N2")</td>
+                        <td>@t.BalanceAfter.ToString("N2")</td>
                     </tr>
                 }
             </tbody>
