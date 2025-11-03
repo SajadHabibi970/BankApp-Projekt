@@ -2,11 +2,15 @@ namespace BlazorApp2.Services;
 using System.Text.Json;
 using BlazorApp2.Interfaces;
 using Microsoft.JSInterop;
-
+/// <summary>
+/// Hanterar lagring av data i webbläsarens localstorage
+/// Sparar och hämtar information som konton och transaktioner mellan sessioner
+/// </summary>
 public class StorageService : IStorageService
 {
     private readonly IJSRuntime _jsRuntime;
     
+    // Insättning för JSON serialisering. Dessa styr hur objekt konverteras till text
     private static readonly JsonSerializerOptions _options = new()
     {
         PropertyNameCaseInsensitive = true,
@@ -19,6 +23,12 @@ public class StorageService : IStorageService
         _jsRuntime = jsRuntime;
     }
 
+    /// <summary>
+    /// Sparar ett objekt till localstorage
+    /// </summary>
+    /// <param name="key">nyckeln som används för att spara datan i localstorage</param>
+    /// <param name="value">Objektet som ska sparas</param>
+    /// <typeparam name="T">Typen av objekt som ska anropas</typeparam>
     public async Task SaveAsync<T>(string key, T value)
     {
         try
@@ -33,6 +43,13 @@ public class StorageService : IStorageService
         }
     }
 
+    /// <summary>
+    /// Hämtar ett objekt från localstorage
+    /// Returnerar det deserialiserade objektet eller null om inget hittades
+    /// </summary>
+    /// <param name="key"></param>
+    /// <typeparam name="T"></typeparam>
+    /// <returns></returns>
     public async Task<T?> LoadAsync<T>(string key)
     {
         try

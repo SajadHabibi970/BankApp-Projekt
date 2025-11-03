@@ -13,10 +13,12 @@
 }
 else
 {
+    <!-- Formulär för att göra ny transaktion-->
     <EditForm Model="_model" OnValidSubmit="HandleTransactionAsync">
         <DataAnnotationsValidator />
         <ValidationSummary />
         
+        <!--Välj vilket konto transaktionen gäller-->
         <div class="mb-3">
             <label class="form-label fw-bold">Från konto</label>
             <InputSelect class="form-select" @bind-Value="_model.FromAccountId">
@@ -30,6 +32,7 @@ else
             </InputSelect>
         </div>
         
+        <!--Välj typ av transaktion-->
         <div class="mb-3">
             <label class="form-label fw-bold">Typ av transaktion</label>
             <InputSelect class="form-select" @bind-Value="_model.Type">
@@ -39,6 +42,7 @@ else
             </InputSelect>
         </div>
         
+        <!--Om användaren väljer överföring visas ett extra fält för mottagarkonto-->
         @if (_model.Type == TransactionType.Transfer)
         {
             <div class="mb-3">
@@ -53,6 +57,7 @@ else
             </div>
         }
         
+        <!--Fält för belopp-->
         <div class="mb-3">
             <label class="form-label fw-bold">Belopp</label>
             <InputNumber class="form-control" @bind-Value="_model.Amount" />
@@ -61,6 +66,7 @@ else
         <button type="submit" class="btn btn-primary">Utför transaktion</button>
     </EditForm>
 
+    <!--Visar ett meddelande efter genomförd transaktion-->
     @if (!string.IsNullOrEmpty(_message))
     {
         <div class="alert alert-info mt-3">@_message</div>
@@ -68,6 +74,9 @@ else
 }
 
 @code {
+    /// <summary>
+    /// Modellklass för formuläret 
+    /// </summary>
     private class TransactionFormModel
     {
         public string FromAccountId { get; set; } = string.Empty;
@@ -80,11 +89,17 @@ else
     private List<IBankAccount> _accounts = new();
     private string _message = "";
 
+    /// <summary>
+    /// Hämtar alla konton när sidan laddas
+    /// </summary>
     protected override async Task OnInitializedAsync()
     {
         _accounts = await AccountService.GetAccounts();
     }
 
+    /// <summary>
+    /// Hanterar användarens transaktion beroende på vald typ
+    /// </summary>
     private async Task HandleTransactionAsync()
     {
         try
@@ -101,6 +116,7 @@ else
                 return;
             }
 
+            // Hanterar olika transaktionstyper
             switch (_model.Type)
             {
                 case TransactionType.Deposit:
@@ -128,6 +144,7 @@ else
                     break;
             }
 
+            // Nollställ formuläret och uppdatera konton
             _model = new TransactionFormModel();
 
             _accounts = await AccountService.GetAccounts();

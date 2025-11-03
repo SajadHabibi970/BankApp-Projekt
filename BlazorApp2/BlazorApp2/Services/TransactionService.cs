@@ -1,7 +1,10 @@
 namespace BlazorApp2.Services;
 using BlazorApp2.Domain;
 using BlazorApp2.Interfaces;
-
+/// <summary>
+/// Hanterar alla transaktioner
+/// Sparar, laddar och filterar transaktioner via localstorage
+/// </summary>
 public class TransactionService : ITransactionService
 {
     private const string StorageKey = "bank-transactions";
@@ -13,7 +16,9 @@ public class TransactionService : ITransactionService
     {
         _storageService = storageService;
     }
-
+    /// <summary>
+    /// Säkerställer att transaktioner har laddats från lagring
+    /// </summary>
     private async Task EnsureInitializedAsync()
     {
         if (_isLoaded)
@@ -38,12 +43,19 @@ public class TransactionService : ITransactionService
         _isLoaded = true;
     }
 
+    /// <summary>
+    /// Sparar alla transaktioner till localstorage
+    /// </summary>
     private async Task SaveAsync()
     {
         await _storageService.SaveAsync(StorageKey, _transactions);
         Console.WriteLine($"[TransactionService] Sparade {_transactions.Count} transaktioner till LocalStorage");
     }
 
+    /// <summary>
+    /// Lägger till en ny transaktion och sparar i listan
+    /// </summary>
+    /// <param name="transaction"></param>
     public async Task AddTransactionAsync(Transaction transaction)
     {
        await EnsureInitializedAsync();
@@ -58,6 +70,10 @@ public class TransactionService : ITransactionService
        Console.WriteLine($"[TransaktionService] Ny transaktion: {transaction.Type} {transaction.Amount}kr {transaction.Description}");
     }
 
+    /// <summary>
+    /// Hämtar all transaktioner, sorterade efter datum
+    /// </summary>
+    /// <returns></returns>
     public async Task<List<Transaction>> GetAllAsync()
     {
         await EnsureInitializedAsync();
@@ -66,6 +82,11 @@ public class TransactionService : ITransactionService
             .ToList();
     }
 
+    /// <summary>
+    /// Hämtar alla transaktioner som tillhör ett specifikt konto
+    /// </summary>
+    /// <param name="accountId"></param>
+    /// <returns></returns>
     public async Task<List<Transaction>> GetByAccountIdAsync(Guid accountId)
     {
         await EnsureInitializedAsync();

@@ -1,6 +1,8 @@
 namespace BlazorApp2.Interfaces;
 using BlazorApp2.Domain;
-
+/// <summary>
+/// Tjänst för hantering av transaktioner
+/// </summary>
 public interface ITransactionService
 {
     Task AddTransactionAsync(Transaction transaction);

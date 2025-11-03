@@ -2,7 +2,10 @@ using BlazorApp2.Domain;
 using BlazorApp2.Interfaces;
 
 namespace BlazorApp2.Services;
-
+/// <summary>
+/// Hanterar skappande, hämtning och updatering av bankkonton
+/// Synkroniserar data med lagringstjänsten och loggar transaktioner
+/// </summary>
 public class AccountService : IAccountService
 {
     private const string StorageKey = "bank-accounts";
@@ -17,6 +20,10 @@ public class AccountService : IAccountService
         _transactionService = transactionService;
     }
 
+    /// <summary>
+    /// Säkerställer att kontodata är inläst från lagringen
+    /// Körs automatiskt innan varje operation
+    /// </summary>
     private async Task EnsureInitializedAsync()
     {
         if (_isLoaded) return;
@@ -31,11 +38,24 @@ public class AccountService : IAccountService
         _isLoaded = true;
     }
 
+    /// <summary>
+    /// Sparar den aktuella listan med konton till localstorage
+    /// </summary>
     private async Task SaveAsync()
     {
         await _storageService.SaveAsync(StorageKey, _accounts);
     }
 
+    /// <summary>
+    /// Skapar ett nytt konto med angivna värden
+    /// Loggar en starttransaktion om saldot är större än 0
+    /// </summary>
+    /// <param name="name"></param>
+    /// <param name="accountType"></param>
+    /// <param name="currency"></param>
+    /// <param name="initialBalance"></param>
+    /// <returns></returns>
+    /// <exception cref="ArgumentException"></exception>
     public async Task<IBankAccount> CreateBankAccount(string name, AccountType accountType, string currency, decimal initialBalance)
     {
         await EnsureInitializedAsync();
@@ -63,18 +83,34 @@ public class AccountService : IAccountService
         return account;
     }
 
+    /// <summary>
+    /// Hämtar alla konton som användaren har
+    /// </summary>
+    /// <returns></returns>
     public async Task<List<IBankAccount>> GetAccounts()
     {
         await EnsureInitializedAsync();
         return _accounts.Cast<IBankAccount>().ToList();
     }
 
+    /// <summary>
+    /// Hämtar ett enskilt konto baserat på dess ID
+    /// </summary>
+    /// <param name="accountId"></param>
+    /// <returns></returns>
     public async Task<IBankAccount?> GetAccount(Guid accountId)
     {
         await EnsureInitializedAsync();
         return _accounts.FirstOrDefault(a => a.Id == accountId);
     }
 
+    /// <summary>
+    /// Gör en insättning på ett konto
+    /// Skapar en transaktion i historiken
+    /// </summary>
+    /// <param name="accountId"></param>
+    /// <param name="amount"></param>
+    /// <exception cref="InvalidOperationException"></exception>
     public async Task DepositAsync(Guid accountId, decimal amount)
     {
         await EnsureInitializedAsync();
@@ -88,6 +124,13 @@ public class AccountService : IAccountService
             new Transaction(account.Id,TransactionType.Deposit, amount,account.Balance,"Insättning"));
     }
 
+    /// <summary>
+    /// Gör ett uttag från ett konto
+    /// skapar en transaktion i historiken
+    /// </summary>
+    /// <param name="accountId"></param>
+    /// <param name="amount"></param>
+    /// <exception cref="InvalidOperationException"></exception>
     public async Task WithdrawAsync(Guid accountId, decimal amount)
     {
         await EnsureInitializedAsync();
@@ -101,6 +144,14 @@ public class AccountService : IAccountService
             new Transaction(account.Id, TransactionType.Withdraw, amount, account.Balance, "Uttag"));
     }
 
+    /// <summary>
+    /// Överför pengar mellan två konton
+    /// Skapar två transaktioner. En för utgående och en för inkommande
+    /// </summary>
+    /// <param name="fromAccountId"></param>
+    /// <param name="toAccountId"></param>
+    /// <param name="amount"></param>
+    /// <exception cref="InvalidOperationException"></exception>
     public async Task TransferAsync(Guid fromAccountId, Guid toAccountId, decimal amount)
     {
         await EnsureInitializedAsync();

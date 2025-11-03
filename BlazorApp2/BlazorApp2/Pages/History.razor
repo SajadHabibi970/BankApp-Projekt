@@ -11,6 +11,7 @@
 }
 else
 {
+    <!--Filter och sorteringskontroller-->
     <div class="d-flex flex-wrap gap-3 mb-3">
         <div>
             <label class="form-label fw-bold">Filtrera per konto:</label>
@@ -25,6 +26,7 @@ else
             </select>
         </div>
         
+        <!--Välj sorteringsordning-->
         <div>
             <label class="form-label fw-bold">Sortera efter:</label>
             <select class="form-select" @onchange="OnSortChanged">
@@ -42,6 +44,7 @@ else
     }
     else
     {
+        <!-- Tabell som visar transaktionshistorik-->
         <table class="table table-striped align-middle">
             <thead class="table-dark">
                 <tr>
@@ -60,6 +63,7 @@ else
                     string typText;
                     string typeClass;
 
+                    <!--Färglägg beroende på typ-->
                     switch (t.Type)
                     {
                         case TransactionType.Deposit:
@@ -91,6 +95,7 @@ else
                             break;
                     }
 
+                    <!--Rad för varje transaktion-->
                     <tr>
                         <td>@t.Date.ToLocalTime().ToString("yyyy-MM-dd HH:mm")</td>
                         <td>@konto?.Name</td>
@@ -110,12 +115,19 @@ else
     private string _selectedAccountId = "";
     private string _sortBy = "DateDesc";
 
+    /// <summary>
+    /// Körs vid sidladdning
+    /// Hämtar konton och transaktioner
+    /// </summary>
     protected override async Task OnInitializedAsync()
     {
         _accounts = await AccountService.GetAccounts();
         await LoadTransactionsAsync();
     }
 
+    /// <summary>
+    /// Laddar transaktioner baserat på valt konto och sortering
+    /// </summary>
     private async Task LoadTransactionsAsync()
     {
         if (string.IsNullOrWhiteSpace(_selectedAccountId))
@@ -146,6 +158,9 @@ else
         SortTransactions();
     }
 
+    /// <summary>
+    /// Sorterar transaktionslistan enligt valt alternativ
+    /// </summary>
     private void SortTransactions()
     {
         _transactions = _sortBy switch

@@ -1,6 +1,8 @@
 namespace BlazorApp2.Interfaces;
 using BlazorApp2.Domain;
-
+/// <summary>
+/// Definierar egenskaper för en transaktion
+/// </summary>
 public interface ITransaction
 {
     Guid Id { get; }

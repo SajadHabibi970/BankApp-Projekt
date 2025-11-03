@@ -1,7 +1,9 @@
 using BlazorApp2.Domain;
 
 namespace BlazorApp2.Interfaces;
-
+/// <summary>
+/// Definierar tjänst för hantering av bankkonton
+/// </summary>
 public interface IAccountService
 {
     Task<IBankAccount> CreateBankAccount(string name, AccountType accountType, string currency, decimal initialBalance);
