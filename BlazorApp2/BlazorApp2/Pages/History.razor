@@ -1,9 +1,16 @@
 @page "/history"
 @using BlazorApp2.Interfaces
+@using BlazorApp2.Services
 @using BlazorApp2.Domain
 @inject IAccountService AccountService
 @inject ITransactionService TransactionService
 <h3>Historik</h3>
+
+<!--JSON export och import av alla bankdata-->
+<div class="mb-3">
+    <button class="btn btn-outline-success me-2" @onclick="ExportData">Exportera JSON</button>
+    <button class="btn btn-outline-secondary" @onclick="ImportData">Importera JSON</button>
+</div>
 
 @if (_accounts == null || !_accounts.Any())
 {
@@ -182,6 +189,36 @@ else
         };
 
         StateHasChanged();
+    }
+
+    // Inject av export och import service
+    [Inject] private DataExportService ExportService { get; set; } = null!;
+    [Inject] IJSRuntime JSRuntime { get; set; } = default!;
+
+    /// <summary>
+    /// Exporterar alla konton och transaktioner till JSON
+    /// Kopierar resultatet till urklipp
+    /// </summary>
+    private async Task ExportData()
+    {
+        var json = await ExportService.ExportAsync();
+        await JSRuntime.InvokeVoidAsync("navigator.clipboard.writeText", json);
+        await JSRuntime.InvokeVoidAsync("alert", "Export klar!");
+    }
+
+    /// <summary>
+    /// Importerar JSON data som användare klistrar in
+    /// Efter import allt laddas igen och visas direkt
+    /// </summary>
+    private async Task ImportData()
+    {
+        var json = await JSRuntime.InvokeAsync<string>("prompt", "Klistra in JSON-data att importera:");
+        if (!string.IsNullOrWhiteSpace(json))
+        {
+            await ExportService.ImportAsync(json);
+            await LoadTransactionsAsync();
+            await JSRuntime.InvokeVoidAsync("alert", "Impoet slutförd");
+        }
     }
 
 }
