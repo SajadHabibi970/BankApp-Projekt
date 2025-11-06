@@ -88,6 +88,6 @@ public class BankAccount : IBankAccount
         AccountType = accountType;
         Balance = balance;
         Currency = currency;
-        LastUpdated = LastUpdated;
+        LastUpdated = DateTime.Now;
     }
 }

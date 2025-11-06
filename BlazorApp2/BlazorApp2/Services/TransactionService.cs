@@ -67,7 +67,7 @@ public class TransactionService : ITransactionService
        
        _transactions.Add(transaction);
        await SaveAsync();
-       Console.WriteLine($"[TransaktionService] Ny transaktion: {transaction.Type} {transaction.Amount}kr {transaction.Description}");
+       Console.WriteLine($"[TransaktionService] Ny transaktion: {transaction.Type} {transaction.Amount:N2}kr {transaction.Description}");
     }
 
     /// <summary>

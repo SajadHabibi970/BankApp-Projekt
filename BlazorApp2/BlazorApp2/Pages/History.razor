@@ -43,6 +43,24 @@ else
                 <option value="AmountAsc" selected="@(_sortBy == "AmountAsc")">Belopp (lägst först)</option>
             </select>
         </div>
+        
+        <!--Datum filtering-->
+        <div>
+            <label class="form-label fw-bold">Från Datum</label>
+            <InputDate class="form-control" @bind-Value="_fromDate"/>
+        </div>
+        
+        <div>
+            <label class="form-label fw-bold">Till datum</label>
+            <InputDate class="form-control" @bind-Value="_toDate"/>
+        </div>
+    </div>
+    
+    <!--Knapp som aktiverar datumfiltering-->
+    <div class="d-flex align-items-end">
+        <button class="btn btn-outline-primary" @onclick="ApplyDateFilter">
+            Filtera datum
+        </button>
     </div>
 
     @if (_transactions == null || !_transactions.Any())
@@ -128,6 +146,8 @@ else
 @code {
     private List<IBankAccount> _accounts = new();
     private List<BlazorApp2.Domain.Transaction> _transactions = new();
+    private DateTime? _fromDate = null;
+    private DateTime? _toDate = null;
     private string _selectedAccountId = "";
     private string _sortBy = "DateDesc";
 
@@ -165,6 +185,8 @@ else
     private async Task OnAccountChanged(ChangeEventArgs e)
     {
         _selectedAccountId = e.Value?.ToString() ?? "";
+        _fromDate = null;
+        _toDate = null;
         await LoadTransactionsAsync();
     }
 
@@ -217,8 +239,30 @@ else
         {
             await ExportService.ImportAsync(json);
             await LoadTransactionsAsync();
-            await JSRuntime.InvokeVoidAsync("alert", "Impoet slutförd");
+            await JSRuntime.InvokeVoidAsync("alert", "Import slutförd");
         }
+    }
+
+    /// <summary>
+    /// Filterar transaktionerna baserat på valt datuminterval
+    /// </summary>
+    private void ApplyDateFilter()
+    {
+        if (_transactions == null || !_transactions.Any())
+        {
+            return;
+        }
+
+        var filtered = _transactions.AsQueryable();
+
+        if (_fromDate.HasValue)
+        {
+            filtered = filtered.Where(t => t.Date.Date <= _toDate.Value.Date);
+        }
+
+        _transactions = filtered.ToList();
+        
+        SortTransactions();
     }
 
 }
