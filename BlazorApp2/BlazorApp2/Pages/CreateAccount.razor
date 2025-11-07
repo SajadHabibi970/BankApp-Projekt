@@ -1,0 +1,106 @@
+@page "/createAccount"
+@using BlazorApp2.Domain
+@using BlazorApp2.Interfaces
+@inject IAccountService AccountService
+<h3>Skapa konto</h3>
+
+<!-- Formulär för att skapa ett nytt konto-->
+<EditForm Model="_model" OnValidSubmit="CreateBankAccountAsync">
+    <DataAnnotationsValidator />
+    <ValidationSummary />
+
+    <!--Textfält för kontonamn-->
+    <div class="mb-2">
+        <label>Kontonamn</label>
+        <InputText class="form-control" @bind-Value="_model.Name" />
+    </div>
+
+    <!--Välj kontotyp-->
+    <div class="mb-2">
+        <label>Kontotyp</label>
+        <InputSelect class="form-select" @bind-Value="_model.AccountType">
+            <option value="@AccountType.Deposit">Bankkonto</option>
+            <option value="@AccountType.Saving">Sparkonto</option>
+        </InputSelect>
+    </div>
+
+    <!--Textfält för valuta-->
+    <div class="mb-2">
+        <label>Valuta</label>
+        <InputText class="form-control" @bind-Value="_model.Currency" />
+    </div>
+
+    <!--Fält för startsaldo-->
+    <div class="mb-2">
+        <label>Startsaldo</label>
+        <InputNumber class="form-control" @bind-Value="_model.InitialBalance" />
+    </div>
+    
+    <button type="submit" class="btn btn-success">Skapa konto</button>
+</EditForm>
+<!--Lista som visar redan skapade konton-->
+@if (_accounts.Any())
+{
+    <h4 class="mt-4">Dina konton</h4>
+    <ul>
+        @foreach (var account in _accounts)
+        {
+            <li>@account.Name – @account.Balance @account.Currency</li>
+        }
+    </ul>
+}
+
+@code {
+    private readonly CreateAccountModel _model = new();
+    private List<IBankAccount> _accounts = new();
+
+    /// <summary>
+    /// Körs när sidan laddas
+    /// Hämtar befintliga konton
+    /// </summary>
+    protected override async Task OnInitializedAsync()
+    {
+        _accounts = await AccountService.GetAccounts();
+    }
+
+    /// <summary>
+    /// Skapar ett nytt konto via Accountservice
+    /// Körs när användaren klickar på skapa konto
+    /// </summary>
+    private async Task CreateBankAccountAsync()
+    {
+        await AccountService.CreateBankAccount(
+            _model.Name,
+            _model.AccountType,
+            _model.Currency,
+            _model.InitialBalance
+        );
+
+        // Uppdaterar kontolistan efter skapande
+        _accounts = await AccountService.GetAccounts();
+        
+        _model.Clear();
+    }
+
+    /// <summary>
+    /// Modellklass som används i formuläret för att skapa konton
+    /// </summary>
+    private class CreateAccountModel
+    {
+        public string Name { get; set; } = "";
+        public AccountType AccountType { get; set; } = AccountType.Deposit;
+        public string Currency { get; set; } = "SEK";
+        public decimal InitialBalance { get; set; } = 0;
+
+        /// <summary>
+        /// Nollställer alla fält i formuläret efter att kontot skapats
+        /// </summary>
+        public void Clear()
+        {
+            Name = "";
+            AccountType = AccountType.Deposit;
+            Currency = "SEK";
+            InitialBalance = 0;
+        }
+    }
+}

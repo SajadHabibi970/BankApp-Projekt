@@ -1,0 +1,99 @@
+@page "/accounts"
+@using BlazorApp2.Interfaces
+@using BlazorApp2.Domain
+@inject IAccountService AccountService
+<!--Sidans rubrik-->
+<h3 class="mb-4 text-primary">Mina konton</h3>
+
+@if (_isLoading)
+{
+    <div class="alert alert-info">Laddar konton</div>
+}
+
+else if (!_accounts.Any())
+{
+    <div class="alert alert-warning">Du har inget konto ännu</div>
+}
+else
+{
+    <!-- Tabell som visar alla konton-->
+    <table class="table table-striped table-bordered align-middle text-center shadow-sm">
+        <thead class="table-light">
+        <tr>
+            <th>Namn</th>
+            <th>Kontotyp</th>
+            <th>Saldo</th>
+            <th>Valuta</th>
+            <th>Senast uppdaterad</th>
+        </tr>
+        </thead>
+        <tbody>
+        @foreach (var account in _accounts)
+        {
+            // Översätt enum till text
+            var typeText = account.AccountType == AccountType.Deposit ? "Bankkonto" : "Sparkonto";
+            <tr>
+                <td class="fw-bold">@account.Name</td>
+                <th>@typeText</th>
+                <td class="text-success fw-semibold">@account.Balance.ToString("N2")</td>
+                <td>@account.Currency</td>
+                <td>@account.LastUpdated.ToLocalTime().ToString("yyyy-MM-dd  HH:mm")</td>
+            </tr>
+        }
+        </tbody>
+    </table>
+}
+
+<div class="mt-3 text-center">
+    <!-- Knapp för att ladda om kontolistan-->
+    <button class="btn btn-outline-primary" @onclick="ReloadAccount">Ladda om</button>
+    
+    <!--Knapp för att lägga till ränta-->
+    <button class="btn btn-outline-success ms-2" @onclick="() => ApplyInterest(1)"> Lägg till 1 % ränta</button>
+</div>
+
+@code {
+    private List<IBankAccount> _accounts = new();
+    private bool _isLoading;
+    
+    /// <summary>
+    /// Körs när sidan laddas första gången
+    /// Hämtar alla konton från AccountService
+    /// </summary>
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadAccountsAsync();
+    }
+
+    /// <summary>
+    /// Hämtar kontolistan och uppdaterar visningen
+    /// </summary>
+    private async Task LoadAccountsAsync()
+    {
+        _isLoading = true;
+        _accounts = await AccountService.GetAccounts();
+        _isLoading = false;
+        StateHasChanged();
+    }
+
+    /// <summary>
+    /// Laddar om kontolistan när användaren klickar på ladda om
+    /// </summary>
+    private async Task ReloadAccount()
+    {
+        await LoadAccountsAsync();
+    }
+
+    /// <summary>
+    /// Lägger till 1% ränta på alla sparkonton
+    /// Efter att räntan lagts till laddas kontolistan om.
+    /// </summary>
+    /// <param name="percent"></param>
+    private async Task ApplyInterest(decimal percent)
+    {
+        await AccountService.ApplyInterestAsync(percent);
+        await LoadAccountsAsync();
+    }
+
+    [Inject] private IJSRuntime JSRuntime { get; set; } = default!;
+}

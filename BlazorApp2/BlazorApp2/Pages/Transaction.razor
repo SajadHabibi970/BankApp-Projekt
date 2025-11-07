@@ -1,0 +1,159 @@
+@page "/transaction"
+@using BlazorApp2.Interfaces
+@inject IAccountService AccountService
+@using BlazorApp2.Domain
+
+<h3>Ny transaktion</h3>
+
+@if (_accounts == null || !_accounts.Any())
+{
+    <div class="alert alert-warning mt-3">
+        Du måste skapa minst ett konto innan du kan göra en transaktion.
+    </div>
+}
+else
+{
+    <!-- Formulär för att göra ny transaktion-->
+    <EditForm Model="_model" OnValidSubmit="HandleTransactionAsync">
+        <DataAnnotationsValidator />
+        <ValidationSummary />
+        
+        <!--Välj vilket konto transaktionen gäller-->
+        <div class="mb-3">
+            <label class="form-label fw-bold">Från konto</label>
+            <InputSelect class="form-select" @bind-Value="_model.FromAccountId">
+                <option value="">Välj konto</option>
+                @foreach (var account in _accounts)
+                {
+                    <option value="@account.Id">
+                        @account.Name (@account.Balance @account.Currency)
+                    </option>
+                }
+            </InputSelect>
+        </div>
+        
+        <!--Välj typ av transaktion-->
+        <div class="mb-3">
+            <label class="form-label fw-bold">Typ av transaktion</label>
+            <InputSelect class="form-select" @bind-Value="_model.Type">
+                <option value="@TransactionType.Deposit">Insättning</option>
+                <option value="@TransactionType.Withdraw">Uttag</option>
+                <option value="@TransactionType.Transfer">Överföring</option>
+            </InputSelect>
+        </div>
+        
+        <!--Om användaren väljer överföring visas ett extra fält för mottagarkonto-->
+        @if (_model.Type == TransactionType.Transfer)
+        {
+            <div class="mb-3">
+                <label class="form-label fw-bold">Till konto</label>
+                <InputSelect class="form-select" @bind-Value="_model.ToAccountId">
+                    <option value="">Välj konto</option>
+                    @foreach (var account in _accounts.Where(a => a.Id.ToString() != _model.FromAccountId))
+                    {
+                        <option value="@account.Id">@account.Name @account.Currency</option>
+                    }
+                </InputSelect>
+            </div>
+        }
+        
+        <!--Fält för belopp-->
+        <div class="mb-3">
+            <label class="form-label fw-bold">Belopp</label>
+            <InputNumber class="form-control" @bind-Value="_model.Amount" />
+        </div>
+
+        <button type="submit" class="btn btn-primary">Utför transaktion</button>
+    </EditForm>
+
+    <!--Visar ett meddelande efter genomförd transaktion-->
+    @if (!string.IsNullOrEmpty(_message))
+    {
+        <div class="alert alert-info mt-3">@_message</div>
+    }
+}
+
+@code {
+    /// <summary>
+    /// Modellklass för formuläret 
+    /// </summary>
+    private class TransactionFormModel
+    {
+        public string FromAccountId { get; set; } = string.Empty;
+        public string ToAccountId { get; set; } = string.Empty;
+        public TransactionType Type { get; set; } = TransactionType.Deposit;
+        public decimal Amount { get; set; }
+    }
+
+    private TransactionFormModel _model = new();
+    private List<IBankAccount> _accounts = new();
+    private string _message = "";
+
+    /// <summary>
+    /// Hämtar alla konton när sidan laddas
+    /// </summary>
+    protected override async Task OnInitializedAsync()
+    {
+        _accounts = await AccountService.GetAccounts();
+    }
+
+    /// <summary>
+    /// Hanterar användarens transaktion beroende på vald typ
+    /// </summary>
+    private async Task HandleTransactionAsync()
+    {
+        try
+        {
+            if (!Guid.TryParse(_model.FromAccountId, out var fromId))
+            {
+                _message = "Välj ett giltigt konto att ta ifrån.";
+                return;
+            }
+
+            if (_model.Amount <= 0)
+            {
+                _message = "Beloppet måste vara större än 0.";
+                return;
+            }
+
+            // Hanterar olika transaktionstyper
+            switch (_model.Type)
+            {
+                case TransactionType.Deposit:
+                    await AccountService.DepositAsync(fromId, _model.Amount);
+                    _message = $"Insättning på {_model.Amount} kr till kontot lyckades";
+                    break;
+
+                case TransactionType.Withdraw:
+                    await AccountService.WithdrawAsync(fromId, _model.Amount);
+                    _message = $"Uttag på {_model.Amount} kr från kontot lyckades";
+                    break;
+
+                case TransactionType.Transfer:
+                    if (!Guid.TryParse(_model.ToAccountId, out var toId))
+                    {
+                        _message = "Välj ett giltigt konto för överföringen.";
+                        return;
+                    }
+
+                    await AccountService.TransferAsync(fromId, toId, _model.Amount);
+
+                    var fromName = _accounts.First(a => a.Id == fromId).Name;
+                    var toName = _accounts.First(a => a.Id == toId).Name;
+                    _message = $"Överföring på {_model.Amount} kr från {fromName} till {toName} lyckades";
+                    break;
+            }
+
+            // Nollställ formuläret och uppdatera konton
+            _model = new TransactionFormModel();
+
+            _accounts = await AccountService.GetAccounts();
+            
+            StateHasChanged();
+        }
+        catch (Exception ex)
+        {
+            _message = $"Fel: {ex.Message}";
+        }
+    }
+}
