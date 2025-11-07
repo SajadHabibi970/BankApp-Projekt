@@ -1,16 +1,68 @@
 ﻿@inherits LayoutComponentBase
-<div class="page">
-    <div class="sidebar">
-        <NavMenu/>
+@inject IJSRuntime JS
+@inject NavigationManager Nav
+
+@if (!_checkedPassword)
+{
+    <!--Visas innan vi har hunnit kolla lösenordet-->
+    <div class="text-center mt-5">
+        <h3>Laddar...</h3>
     </div>
+}
 
-    <main>
-        <div class="top-row px-4">
-            <a href="https://learn.microsoft.com/aspnet/core/" target="_blank">About</a>
-        </div>
+else
+{
+    <div class="page">
+        <!--menyn visas inte när vi är på password sidan-->
+        @if (!IsPasswordPage)
+        {
+            <div class="sidebar">
+                <NavMenu/>
+            </div>
+        }
 
-        <article class="content px-4">
-            @Body
-        </article>
-    </main>
-</div>
+        <main>
+            <div class="top-row px-4">
+                <a href="https://learn.microsoft.com/aspnet/core/" target="_blank">About</a>
+            </div>
+
+            <article class="content px-4">
+                @Body
+            </article>
+        </main>
+    </div>
+}
+
+@code
+{
+    /// <summary>
+    /// Kollar om den aktuella sidan är password
+    /// använder detta för att kunna gömma sidomenyn på lösenordssidan
+    /// </summary>
+    private bool IsPasswordPage =>
+        Nav.Uri.Contains("/password", StringComparison.OrdinalIgnoreCase);
+
+    private bool _checkedPassword = false;
+    
+    /// <summary>
+    /// Den körs när layouten laddas
+    /// kollar om användaren har låst upp appen eller inte
+    /// Om appen inte är upplåst skickas man automatiskt till passwordsidan
+    /// </summary>
+    protected override async Task OnInitializedAsync()
+    {
+        await JS.InvokeVoidAsync("localStorage.removeItem", "app-unlocked");
+        var unlocked = await JS.InvokeAsync<string>("localStorage.getItem", "app-unlocked");
+
+        var current = Nav.ToBaseRelativePath(Nav.Uri).TrimEnd('/');
+
+        if (string.IsNullOrWhiteSpace(unlocked) && !string.Equals(current, "password", StringComparison.OrdinalIgnoreCase))
+        {
+            Nav.NavigateTo("/password", forceLoad:true);
+            return;
+        }
+
+        // När lösenorden är klar
+        _checkedPassword = true;
+    }
+}
